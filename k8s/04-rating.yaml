@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rating
+  namespace: logistics
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: rating }
+  template:
+    metadata:
+      labels: { app: rating }
+    spec:
+      containers:
+        - name: rating
+          image: guruprasanna30/logistics-rating:v6
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 8000 }]
+          envFrom: [{ configMapRef: { name: logistics-config } }]
+          env:
+            - name: SERVICE_NAME
+              value: "rating"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rating
+  namespace: logistics
+spec:
+  selector: { app: rating }
+  ports: [{ port: 8000, targetPort: 8000 }]

@@ -1,0 +1,42 @@
+apiVersion: v1
+kind: ConfigMap
+metadata: {name: prometheus-config, namespace: logistics}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 5s
+    scrape_configs:
+      - job_name: frontend
+        static_configs: [{targets: ["frontend:8000"]}]
+      - job_name: rating
+        static_configs: [{targets: ["rating:8000"]}]
+      - job_name: shipment
+        static_configs: [{targets: ["shipment:8000"]}]
+      - job_name: tracking
+        static_configs: [{targets: ["tracking:8000"]}]
+      - job_name: loadgen
+        static_configs: [{targets: ["loadgen:8000"]}]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: {name: prometheus, namespace: logistics}
+spec:
+  replicas: 1
+  selector: {matchLabels: {app: prometheus}}
+  template:
+    metadata: {labels: {app: prometheus}}
+    spec:
+      containers:
+        - name: prometheus
+          image: prom/prometheus:v3.3.1
+          args: ["--config.file=/etc/prometheus/prometheus.yml", "--storage.tsdb.retention.time=3d"]
+          ports: [{containerPort: 9090}]
+          volumeMounts: [{name: config, mountPath: /etc/prometheus}]
+      volumes: [{name: config, configMap: {name: prometheus-config}}]
+---
+apiVersion: v1
+kind: Service
+metadata: {name: prometheus, namespace: logistics}
+spec:
+  selector: {app: prometheus}
+  ports: [{port: 9090, targetPort: 9090}]

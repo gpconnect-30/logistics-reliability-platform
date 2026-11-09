@@ -1,0 +1,15 @@
+global:
+  scrape_interval: 5s
+scrape_configs:
+  - job_name: frontend
+    metrics_path: /metrics
+    static_configs: [{targets: ["frontend:8000"]}]
+  - job_name: rating
+    metrics_path: /metrics
+    static_configs: [{targets: ["rating:8000"]}]
+  - job_name: shipment
+    metrics_path: /metrics
+    static_configs: [{targets: ["shipment:8000"]}]
+  - job_name: tracking
+    metrics_path: /metrics
+    static_configs: [{targets: ["tracking:8000"]}]

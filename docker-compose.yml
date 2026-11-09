@@ -1,0 +1,79 @@
+services:
+  postgres:
+    image: postgres:16
+    environment:
+      POSTGRES_USER: logistics
+      POSTGRES_PASSWORD: logistics
+      POSTGRES_DB: logistics
+    ports: ["5432:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U logistics -d logistics"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  redis:
+    image: redis:7.4
+    ports: ["6379:6379"]
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes: [redisdata:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  frontend:
+    build: {context: ., args: {SERVICE: frontend}}
+    image: logistics-frontend:dev
+    ports: ["8000:8000"]
+    environment: {RATING_URL: "http://rating:8000", SHIPMENT_URL: "http://shipment:8000", TRACKING_URL: "http://tracking:8000", OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"}
+    depends_on: [rating, shipment, tracking, otel-collector]
+
+  rating:
+    build: {context: ., args: {SERVICE: rating}}
+    image: logistics-rating:dev
+    ports: ["8001:8000"]
+    environment: {REDIS_URL: "redis://redis:6379/0", OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"}
+    depends_on: [redis, otel-collector]
+
+  shipment:
+    build: {context: ., args: {SERVICE: shipment}}
+    image: logistics-shipment:dev
+    ports: ["8002:8000"]
+    environment: {DATABASE_URL: "postgresql://logistics:logistics@postgres:5432/logistics", REDIS_URL: "redis://redis:6379/0", RATING_URL: "http://rating:8000", OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"}
+    depends_on: [postgres, redis, rating, otel-collector]
+
+  tracking:
+    build: {context: ., args: {SERVICE: tracking}}
+    image: logistics-tracking:dev
+    ports: ["8003:8000"]
+    environment: {DATABASE_URL: "postgresql://logistics:logistics@postgres:5432/logistics", REDIS_URL: "redis://redis:6379/0", OTEL_EXPORTER_OTLP_ENDPOINT: "http://otel-collector:4317"}
+    depends_on: [postgres, redis, otel-collector]
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:0.125.0
+    command: ["--config=/etc/otelcol/config.yaml"]
+    volumes: ["./observability/otel-collector.yaml:/etc/otelcol/config.yaml:ro"]
+    ports: ["4317:4317", "4318:4318"]
+
+  prometheus:
+    image: prom/prometheus:v3.3.1
+    volumes: ["./observability/prometheus.yml:/etc/prometheus/prometheus.yml:ro"]
+    ports: ["9090:9090"]
+    depends_on: [frontend, rating, shipment, tracking]
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.69.0
+    ports: ["16686:16686", "14250:14250"]
+
+  grafana:
+    image: grafana/grafana:11.6.0
+    ports: ["3000:3000"]
+    environment: {GF_SECURITY_ADMIN_USER: admin, GF_SECURITY_ADMIN_PASSWORD: admin}
+    volumes: ["./observability/grafana-datasources.yml:/etc/grafana/provisioning/datasources/datasources.yaml:ro"]
+
+volumes:
+  pgdata:
+  redisdata:

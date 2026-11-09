@@ -1,0 +1,70 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: jaeger, namespace: logistics }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: jaeger } }
+  template:
+    metadata: { labels: { app: jaeger } }
+    spec:
+      containers:
+        - name: jaeger
+          image: jaegertracing/all-in-one:1.69.0
+          ports: [{ containerPort: 4317 }, { containerPort: 16686 }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: jaeger, namespace: logistics }
+spec:
+  selector: { app: jaeger }
+  ports:
+    - { name: otlp-grpc, port: 4317, targetPort: 4317 }
+    - { name: ui, port: 16686, targetPort: 16686 }
+---
+apiVersion: v1
+kind: ConfigMap
+metadata: { name: otel-collector-config, namespace: logistics }
+data:
+  config.yaml: |
+    receivers:
+      otlp:
+        protocols:
+          grpc:
+            endpoint: 0.0.0.0:4317
+    processors:
+      batch:
+    exporters:
+      otlp:
+        endpoint: jaeger:4317
+        tls:
+          insecure: true
+    service:
+      pipelines:
+        traces:
+          receivers: [otlp]
+          processors: [batch]
+          exporters: [otlp]
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: otel-collector, namespace: logistics }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: otel-collector } }
+  template:
+    metadata: { labels: { app: otel-collector } }
+    spec:
+      containers:
+        - name: collector
+          image: otel/opentelemetry-collector-contrib:0.165.0
+          args: ["--config=/etc/otelcol/config.yaml"]
+          ports: [{ containerPort: 4317 }]
+          volumeMounts: [{ name: config, mountPath: /etc/otelcol }]
+      volumes: [{ name: config, configMap: { name: otel-collector-config } }]
+---
+apiVersion: v1
+kind: Service
+metadata: { name: otel-collector, namespace: logistics }
+spec:
+  selector: { app: otel-collector }
+  ports: [{ port: 4317, targetPort: 4317 }]

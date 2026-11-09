@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loadgen
+  namespace: logistics
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: loadgen
+  template:
+    metadata:
+      labels:
+        app: loadgen
+    spec:
+      containers:
+        - name: loadgen
+          image: guruprasanna30/logistics-loadgen:v1
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - configMapRef:
+                name: logistics-config
+          env:
+            - name: FRONTEND_URL
+              value: "http://frontend:8000"
+            - name: LOADGEN_INTERVAL_SECONDS
+              value: "10"
+            - name: LOADGEN_TRACKING_RETRIES
+              value: "8"
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 250m
+              memory: 256Mi
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loadgen
+  namespace: logistics
+spec:
+  selector:
+    app: loadgen
+  ports:
+    - name: http
+      port: 8000
+      targetPort: 8000

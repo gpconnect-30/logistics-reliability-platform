@@ -1,0 +1,31 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: shipment
+  namespace: logistics
+spec:
+  replicas: 1
+  selector:
+    matchLabels: { app: shipment }
+  template:
+    metadata:
+      labels: { app: shipment }
+    spec:
+      containers:
+        - name: shipment
+          image: guruprasanna30/logistics-shipment:v6
+          imagePullPolicy: IfNotPresent
+          ports: [{ containerPort: 8000 }]
+          envFrom: [{ configMapRef: { name: logistics-config } }]
+          env:
+            - name: SERVICE_NAME
+              value: "shipment"
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: shipment
+  namespace: logistics
+spec:
+  selector: { app: shipment }
+  ports: [{ port: 8000, targetPort: 8000 }]

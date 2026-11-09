@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: logistics-config
+  namespace: logistics
+data:
+  DATABASE_URL: postgresql://logistics:logistics@postgres:5432/logistics
+  REDIS_URL: redis://redis:6379/0
+  RATING_URL: http://rating:8000
+  SHIPMENT_URL: http://shipment:8000
+  TRACKING_URL: http://tracking:8000
+  OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-collector:4317
