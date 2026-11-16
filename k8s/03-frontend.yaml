@@ -13,7 +13,7 @@ spec:
     spec:
       containers:
         - name: frontend
-          image: guruprasanna30/logistics-frontend:v6
+          image: guruprasanna30/logistics-frontend:v11
           imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 8000 }]
           envFrom: [{ configMapRef: { name: logistics-config } }]

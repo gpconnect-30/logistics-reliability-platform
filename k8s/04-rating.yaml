@@ -13,11 +13,15 @@ spec:
     spec:
       containers:
         - name: rating
-          image: guruprasanna30/logistics-rating:v6
+          image: guruprasanna30/logistics-rating:v7
           imagePullPolicy: IfNotPresent
           ports: [{ containerPort: 8000 }]
           envFrom: [{ configMapRef: { name: logistics-config } }]
           env:
+            - name: FAILURE_MODE
+              value: "off"
+            - name: FAILURE_DELAY_SECONDS
+              value: "7"
             - name: SERVICE_NAME
               value: "rating"
 ---
